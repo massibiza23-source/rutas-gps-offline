@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+html, body, #root {
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 /* Leaflet Tile Darkening and Contrast Filter for Tactical Outdoor Map */
 .leaflet-tile {
   filter: brightness(0.68) invert(1) contrast(3.2) hue-rotate(190deg) saturate(0.3) brightness(0.7);
