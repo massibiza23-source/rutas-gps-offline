@@ -1,9 +1,8 @@
 /**
- * Tactical Outdoor Telemetry HUD
- * High-visibility real-time dashboard for outdoor athletes and hikers.
+ * Tactical Outdoor Telemetry HUD & Altimeter
+ * High-visibility real-time dashboard for outdoor activities.
  * Displays speed, pace, distance, elevation, GPS fix accuracy, and route controls.
- * Optimized with safe-area padding and compact mobile layout to guarantee
- * 100% visibility of the 'Iniciar Grabación' button on all physical devices.
+ * Features a permanent dedicated Barometric & GPS Altimeter instrument (msnm, hPa, cotas).
  */
 
 import React, { useState } from 'react';
@@ -66,6 +65,26 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
   const accuracy = currentPosition?.accuracy ?? null;
   const altitude = currentPosition?.altitude ?? currentRoute?.maxElevation ?? null;
 
+  // Real-time pressure estimate at current altitude
+  const pressureEst = (
+    1013.25 * Math.pow(1 - (0.0065 * (altitude || 450)) / 288.15, 5.255)
+  ).toFixed(1);
+
+  // Min and Max altitudes
+  const minAlt =
+    currentRoute?.minElevation !== null && currentRoute?.minElevation !== undefined
+      ? Math.round(currentRoute.minElevation)
+      : altitude !== null
+      ? Math.round(altitude)
+      : '--';
+
+  const maxAlt =
+    currentRoute?.maxElevation !== null && currentRoute?.maxElevation !== undefined
+      ? Math.round(currentRoute.maxElevation)
+      : altitude !== null
+      ? Math.round(altitude)
+      : '--';
+
   // Signal quality badge
   const getSignalBadge = () => {
     if (isSimulating) {
@@ -121,7 +140,14 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
           {getSignalBadge()}
           <span className="hidden sm:inline-block text-slate-600">|</span>
           <span className="hidden md:inline-block text-[10px] text-slate-400">
-            Perfil: <strong className="text-slate-200 uppercase">{batteryProfile === 'high_precision' ? 'Alta Precisión' : batteryProfile === 'balanced' ? 'Equilibrado' : 'Ultra Trek'}</strong>
+            Perfil:{' '}
+            <strong className="text-slate-200 uppercase">
+              {batteryProfile === 'high_precision'
+                ? 'Alta Precisión'
+                : batteryProfile === 'balanced'
+                ? 'Equilibrado'
+                : 'Ultra Trek'}
+            </strong>
           </span>
         </div>
 
@@ -132,7 +158,11 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
               {batteryInfo.charging ? (
                 <BatteryCharging className="w-3.5 h-3.5 text-emerald-400" />
               ) : (
-                <Battery className={`w-3.5 h-3.5 ${batteryInfo.level < 20 ? 'text-rose-400 animate-pulse' : 'text-slate-300'}`} />
+                <Battery
+                  className={`w-3.5 h-3.5 ${
+                    batteryInfo.level < 20 ? 'text-rose-400 animate-pulse' : 'text-slate-300'
+                  }`}
+                />
               )}
               <span>{batteryInfo.level}%</span>
             </div>
@@ -141,7 +171,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
           {/* Map Layer Switcher Button */}
           <button
             onClick={onToggleMapMode}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 text-[10px] font-medium border border-slate-700 transition"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 text-[10px] font-medium border border-slate-700 transition cursor-pointer"
           >
             <Compass className="w-3 h-3" />
             <span>{mapType === 'vector_canvas' ? 'Mapa Base' : 'Lienzo Vector'}</span>
@@ -151,32 +181,32 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             title={isCollapsed ? 'Expandir telemetría' : 'Colapsar telemetría'}
-            className="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 transition"
+            className="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 transition cursor-pointer"
           >
             {isCollapsed ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
-      {/* Main Outdoor Telemetry Grid (Collapsible to save space on mobile) */}
+      {/* Main Outdoor Telemetry Grid (Collapsible) */}
       {!isCollapsed && (
-        <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 px-3 py-2 text-center">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-2 px-3 py-1.5 text-center">
           {/* Metric 1: Distance */}
-          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center">
-            <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-1.5 flex flex-col justify-center">
+            <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">
               Distancia
             </span>
-            <div className="font-mono text-sm sm:text-lg font-black text-emerald-400 leading-tight">
+            <div className="font-mono text-sm sm:text-base font-black text-emerald-400 leading-tight">
               {currentRoute ? formatDistance(currentRoute.totalDistance) : '0 m'}
             </div>
           </div>
 
           {/* Metric 2: Speed */}
-          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center">
-            <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-1.5 flex flex-col justify-center">
+            <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">
               Velocidad
             </span>
-            <div className="font-mono text-sm sm:text-lg font-black text-sky-400 leading-tight">
+            <div className="font-mono text-sm sm:text-base font-black text-sky-400 leading-tight">
               {formatSpeed(speedKmh)}
             </div>
             <span className="hidden sm:inline text-[8px] text-slate-500 font-mono">
@@ -185,87 +215,87 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
           </div>
 
           {/* Metric 3: Duration */}
-          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center">
-            <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-1.5 flex flex-col justify-center">
+            <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">
               Tiempo
             </span>
-            <div className="font-mono text-sm sm:text-lg font-black text-amber-400 leading-tight">
+            <div className="font-mono text-sm sm:text-base font-black text-amber-400 leading-tight">
               {currentRoute ? formatDuration(currentRoute.duration) : '00:00'}
             </div>
           </div>
 
-          {/* Metric 4: Elevation Gain / Altitude */}
-          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center">
-            <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+          {/* Metric 4: Elevation Gain */}
+          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-1.5 flex flex-col justify-center">
+            <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">
               Desnivel +
             </span>
-            <div className="font-mono text-sm sm:text-lg font-black text-teal-400 leading-tight">
-              +{currentRoute ? currentRoute.elevationGain : 0}m
+            <div className="font-mono text-sm sm:text-base font-black text-teal-400 leading-tight">
+              +{currentRoute ? currentRoute.elevationGain : 0} m
             </div>
-            <span className="hidden sm:inline text-[8px] text-slate-500 font-mono">
-              {altitude !== null ? `${Math.round(altitude)}m` : '--'}
-            </span>
           </div>
         </div>
       )}
 
-      {/* Control Actions Bar - Always prominently visible */}
-      <div className="px-3 pt-1 pb-1">
-        {!isRecording && !isPaused && (
-          <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-slate-950/90 border border-slate-700/80 shadow-lg">
-            {/* Altimeter Display Instrument */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-teal-950/80 border border-teal-500/40 text-teal-400 flex items-center justify-center shrink-0 shadow-md">
-                <Mountain className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                    Altímetro Barométrico & GPS
-                  </span>
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-teal-950 border border-teal-500/30 text-teal-300 font-bold">
-                    MSNM
-                  </span>
-                </div>
-
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="font-mono text-xl sm:text-2xl font-black text-teal-300 tracking-tight">
-                    {altitude !== null ? `${Math.round(altitude)} m` : '-- m'}
-                  </span>
-                  <span className="text-[11px] font-mono text-slate-400">
-                    Presión: <strong className="text-slate-200">
-                      {(1013.25 * Math.pow(1 - (0.0065 * (altitude || 450)) / 288.15, 5.255)).toFixed(1)} hPa
-                    </strong>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 text-[10px] text-slate-400 font-mono mt-0.5">
-                  <span>Cota Mín: <strong className="text-slate-300">{currentRoute?.minElevation !== null && currentRoute?.minElevation !== undefined ? `${Math.round(currentRoute.minElevation)}m` : (altitude ? `${Math.round(altitude)}m` : '--')}</strong></span>
-                  <span className="text-slate-600">·</span>
-                  <span>Cota Máx: <strong className="text-slate-300">{currentRoute?.maxElevation !== null && currentRoute?.maxElevation !== undefined ? `${Math.round(currentRoute.maxElevation)}m` : (altitude ? `${Math.round(altitude)}m` : '--')}</strong></span>
-                  <span className="text-slate-600">·</span>
-                  <span className="text-emerald-400 font-bold">Desnivel +{currentRoute?.elevationGain || 0}m</span>
-                </div>
-              </div>
+      {/* Permanent Dedicated Altimeter Instrument */}
+      <div className="px-3 pt-1">
+        <div className="flex items-center justify-between gap-3 p-2.5 rounded-2xl bg-slate-950 border border-slate-800 shadow-inner">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-teal-950/90 border border-teal-500/40 text-teal-400 flex items-center justify-center shrink-0 shadow-sm">
+              <Mountain className="w-5 h-5" />
             </div>
 
-            {/* Quick Record Trigger */}
-            <button
-              onClick={onStart}
-              title="Iniciar grabación de ruta"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-950/60 border border-emerald-400/80 active:scale-95 transition cursor-pointer shrink-0"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span className="hidden sm:inline">Iniciar Ruta</span>
-            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                  Altímetro
+                </span>
+                <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-teal-950 border border-teal-500/30 text-teal-300 font-bold">
+                  MSNM
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span className="font-mono text-xl sm:text-2xl font-black text-teal-300 tracking-tight leading-none">
+                  {altitude !== null ? `${Math.round(altitude)} m` : '-- m'}
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {pressureEst} hPa
+                </span>
+              </div>
+            </div>
           </div>
+
+          {/* Cotas min/max */}
+          <div className="text-right text-[10px] text-slate-400 font-mono">
+            <div>
+              Mín: <strong className="text-slate-200">{minAlt}{typeof minAlt === 'number' ? 'm' : ''}</strong>
+            </div>
+            <div>
+              Máx: <strong className="text-slate-200">{maxAlt}{typeof maxAlt === 'number' ? 'm' : ''}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Control Actions Bar */}
+      <div className="px-3 pt-2 pb-1">
+        {!isRecording && !isPaused && (
+          <button
+            onClick={onStart}
+            className="w-full min-h-[48px] sm:min-h-[52px] flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm uppercase tracking-wider shadow-xl shadow-emerald-950/70 border border-emerald-400/80 active:scale-[0.98] transition cursor-pointer"
+          >
+            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
+            </div>
+            <span>Iniciar Grabación de Ruta</span>
+          </button>
         )}
 
         {isRecording && (
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={onPause}
-              className="flex-1 min-h-[48px] flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm shadow-lg shadow-amber-950/50 active:scale-[0.98] transition cursor-pointer border border-amber-400/60"
+              className="flex-1 min-h-[46px] flex items-center justify-center gap-2 py-2 px-3 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-950/50 active:scale-[0.98] transition cursor-pointer border border-amber-400/60"
             >
               <Pause className="w-4 h-4 fill-current" />
               <span>Pausar</span>
@@ -273,7 +303,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
             <button
               onClick={onOpenWaypointModal}
-              className="min-h-[48px] px-3.5 flex items-center justify-center gap-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 font-bold text-xs active:scale-[0.98] transition cursor-pointer"
+              className="min-h-[46px] px-3.5 flex items-center justify-center gap-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 font-bold text-xs active:scale-[0.98] transition cursor-pointer"
             >
               <MapPin className="w-4 h-4 text-sky-400" />
               <span>Hito</span>
@@ -281,7 +311,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
             <button
               onClick={onFinish}
-              className="flex-1 min-h-[48px] flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-sm shadow-lg shadow-rose-950/50 active:scale-[0.98] transition cursor-pointer border border-rose-400/60"
+              className="flex-1 min-h-[46px] flex items-center justify-center gap-2 py-2 px-3 rounded-2xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-rose-950/50 active:scale-[0.98] transition cursor-pointer border border-rose-400/60"
             >
               <Square className="w-4 h-4 fill-current" />
               <span>Finalizar</span>
@@ -290,10 +320,10 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
         )}
 
         {isPaused && (
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={onResume}
-              className="flex-1 min-h-[48px] flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-950/50 active:scale-[0.98] transition cursor-pointer border border-emerald-400/60"
+              className="flex-1 min-h-[46px] flex items-center justify-center gap-2 py-2 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-950/50 active:scale-[0.98] transition cursor-pointer border border-emerald-400/60"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Reanudar</span>
@@ -301,7 +331,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
             <button
               onClick={onOpenWaypointModal}
-              className="min-h-[48px] px-3.5 flex items-center justify-center gap-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 font-bold text-xs active:scale-[0.98] transition cursor-pointer"
+              className="min-h-[46px] px-3.5 flex items-center justify-center gap-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 font-bold text-xs active:scale-[0.98] transition cursor-pointer"
             >
               <MapPin className="w-4 h-4 text-sky-400" />
               <span>Hito</span>
@@ -309,7 +339,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
 
             <button
               onClick={onFinish}
-              className="flex-1 min-h-[48px] flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-sm shadow-lg shadow-rose-950/50 active:scale-[0.98] transition cursor-pointer border border-rose-400/60"
+              className="flex-1 min-h-[46px] flex items-center justify-center gap-2 py-2 px-3 rounded-2xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-rose-950/50 active:scale-[0.98] transition cursor-pointer border border-rose-400/60"
             >
               <Square className="w-4 h-4 fill-current" />
               <span>Finalizar</span>
