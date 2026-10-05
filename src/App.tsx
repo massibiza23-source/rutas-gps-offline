@@ -1,14 +1,16 @@
 /**
- * RutaGPS Offline - Outdoor GPS Tracker & Cartography Engine
+ * RutaGPS Offline - Outdoor GPS Tracker & 3D Real Route Viewer
  * 100% offline, production-grade tracking for real outdoor activities (hiking, cycling, trail running).
  * Features IndexedDB storage for saved routes, pure vector canvas map, Leaflet base map fallback,
- * tactical altimeter (msnm, hPa, cotas), elevation profiles, waypoints, and GPX/GeoJSON export.
+ * tactical altimeter (msnm, hPa, cotas), elevation profiles, waypoints, and GPX/GeoJSON export,
+ * PLUS an interactive Fullscreen 3D Viewer rendering the user's REAL recorded GPS track.
  */
 
 import React, { useState, useEffect } from 'react';
 import { useGPSTracker } from './hooks/useGPSTracker';
 import { VectorCanvasMap } from './components/VectorCanvasMap';
 import { LeafletMapRenderer } from './components/LeafletMapRenderer';
+import { Route3DViewer } from './components/Route3DViewer';
 import { TelemetryHUD } from './components/TelemetryHUD';
 import { ElevationProfile } from './components/ElevationProfile';
 import { AddWaypointModal } from './components/AddWaypointModal';
@@ -30,9 +32,20 @@ import {
   Activity,
   Edit2,
   Check,
+  Box,
+  Map as MapIcon,
+  Maximize2,
+  Minimize2,
+  Mountain,
 } from 'lucide-react';
 
 export default function App() {
+  // Mode: 'outdoor_gps' (2D Tactical Map) vs 'route_3d' (3D Real Route Relief Viewer)
+  const [viewMode, setViewMode] = useState<'outdoor_gps' | 'route_3d'>('outdoor_gps');
+
+  // Fullscreen 3D state
+  const [is3DFullscreen, setIs3DFullscreen] = useState(false);
+
   const {
     currentRoute,
     trackPoints,
@@ -79,6 +92,32 @@ export default function App() {
     refreshRouteCount();
   }, [currentRoute?.status, isHistoryModalOpen]);
 
+  // Fullscreen toggler with native browser Fullscreen API
+  const handleToggleFullscreen = () => {
+    if (!is3DFullscreen) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      setIs3DFullscreen(true);
+    } else {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      setIs3DFullscreen(false);
+    }
+  };
+
+  // Sync with native fullscreen exit (e.g. Esc key)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && is3DFullscreen) {
+        setIs3DFullscreen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [is3DFullscreen]);
+
   const isRecording = currentRoute?.status === 'recording';
   const isPaused = currentRoute?.status === 'paused';
 
@@ -107,12 +146,57 @@ export default function App() {
       {/* Offline Status Badge */}
       <OfflineIndicator />
 
+      {/* FULLSCREEN REAL ROUTE 3D OVERLAY - 100% Pantalla Completa Immersiva */}
+      {is3DFullscreen && (
+        <div className="fixed inset-0 z-50 w-screen h-[100dvh] bg-black flex flex-col overflow-hidden">
+          {/* Top Floating Exit Bar */}
+          <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between pointer-events-none">
+            <div className="flex items-center gap-2 pointer-events-auto bg-slate-950/90 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-slate-700/80 shadow-2xl">
+              <Mountain className="w-4 h-4 text-teal-400" />
+              <span className="text-xs font-black text-white uppercase tracking-wider">
+                {currentRoute?.title || routeTitle} · Relieve 3D
+              </span>
+              {isRecording && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-1" />
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 pointer-events-auto">
+              <button
+                onClick={handleToggleFullscreen}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-xl active:scale-95 transition cursor-pointer border border-rose-400"
+              >
+                <Minimize2 className="w-4 h-4" />
+                <span>Salir de Pantalla Completa</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Fullscreen 3D Real Route Viewport */}
+          <div className="w-full h-full flex-1">
+            <Route3DViewer
+              trackPoints={trackPoints}
+              waypoints={waypoints}
+              currentPosition={currentPosition}
+              isRecording={isRecording}
+              isFullscreen={true}
+              onToggleFullscreen={handleToggleFullscreen}
+              onStartRecording={handleStartRecording}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Main Top Header */}
       <header className="h-14 sm:h-16 px-3 sm:px-4 bg-slate-900/95 border-b border-white/10 backdrop-blur-xl flex items-center justify-between z-30 select-none shrink-0">
         {/* Brand & Route Name */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-950/60 shrink-0">
-            <Compass className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            {viewMode === 'outdoor_gps' ? (
+              <Compass className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            ) : (
+              <Mountain className="w-5 h-5 sm:w-6 sm:h-6 text-teal-300" />
+            )}
           </div>
 
           <div>
@@ -174,132 +258,181 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-400 font-mono">
-              <span className="text-emerald-400 font-semibold">RutaGPS Offline</span>
+              <span className="text-emerald-400 font-semibold">
+                {viewMode === 'outdoor_gps' ? 'RutaGPS 2D' : 'Relieve 3D Real'}
+              </span>
               <span className="text-slate-600">·</span>
               <span className="hidden sm:inline">100% Autónomo</span>
             </div>
           </div>
         </div>
 
-        {/* Activity Selector & Right Tools */}
+        {/* Center Mode Switcher Tabs (2D Map vs 3D Real Route) */}
+        <div className="flex items-center bg-slate-950/80 p-0.5 sm:p-1 rounded-xl border border-white/10 shadow-inner">
+          <button
+            onClick={() => setViewMode('outdoor_gps')}
+            className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+              viewMode === 'outdoor_gps'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <MapIcon className="w-3.5 h-3.5" />
+            <span>Mapa 2D</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode('route_3d')}
+            className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+              viewMode === 'route_3d'
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Box className="w-3.5 h-3.5" />
+            <span>Relieve 3D</span>
+          </button>
+        </div>
+
+        {/* Right Tools & Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Activity Type Switcher (When not recording) */}
-          {!isRecording && !isPaused && (
-            <div className="hidden sm:flex items-center bg-slate-950/80 p-0.5 rounded-xl border border-white/10 text-xs">
+          {viewMode === 'route_3d' ? (
+            /* Direct Fullscreen Button in Header for 3D View */
+            <button
+              onClick={handleToggleFullscreen}
+              title="Ver en Pantalla Completa"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md active:scale-95 transition cursor-pointer border border-sky-400"
+            >
+              <Maximize2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Pantalla Completa</span>
+            </button>
+          ) : (
+            <>
+              {/* Activity Selector (When not recording) */}
+              {!isRecording && !isPaused && (
+                <div className="hidden lg:flex items-center bg-slate-950/80 p-0.5 rounded-xl border border-white/10 text-xs">
+                  <button
+                    onClick={() => setSelectedActivity('hiking')}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                      selectedActivity === 'hiking'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Footprints className="w-3.5 h-3.5" />
+                    <span>Senderismo</span>
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedActivity('cycling')}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                      selectedActivity === 'cycling'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Bike className="w-3.5 h-3.5" />
+                    <span>Bici</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Mis Rutas Grabadas Button */}
               <button
-                onClick={() => setSelectedActivity('hiking')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
-                  selectedActivity === 'hiking'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                onClick={() => setIsHistoryModalOpen(true)}
+                title="Mis Rutas Guardadas en IndexedDB"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 text-xs font-bold transition cursor-pointer shadow-md"
               >
-                <Footprints className="w-3.5 h-3.5" />
-                <span>Senderismo</span>
+                <FolderOpen className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="hidden md:inline">Mis Rutas</span>
+                {savedRouteCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] flex items-center justify-center font-mono ml-0.5">
+                    {savedRouteCount}
+                  </span>
+                )}
               </button>
 
+              {/* Settings */}
               <button
-                onClick={() => setSelectedActivity('cycling')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
-                  selectedActivity === 'cycling'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                onClick={() => setIsSettingsModalOpen(true)}
+                title="Ajustes de Batería y GPS"
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer"
               >
-                <Bike className="w-3.5 h-3.5" />
-                <span>Bici</span>
+                <Sliders className="w-4 h-4 text-sky-400" />
               </button>
-
-              <button
-                onClick={() => setSelectedActivity('trail_running')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
-                  selectedActivity === 'trail_running'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Trail</span>
-              </button>
-            </div>
+            </>
           )}
-
-          {/* Mis Rutas Grabadas Button */}
-          <button
-            onClick={() => setIsHistoryModalOpen(true)}
-            title="Mis Rutas Guardadas en IndexedDB"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 text-xs font-bold transition cursor-pointer shadow-md"
-          >
-            <FolderOpen className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Mis Rutas</span>
-            {savedRouteCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] flex items-center justify-center font-mono ml-0.5">
-                {savedRouteCount}
-              </span>
-            )}
-          </button>
-
-          {/* Settings */}
-          <button
-            onClick={() => setIsSettingsModalOpen(true)}
-            title="Ajustes de Batería y GPS"
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer"
-          >
-            <Sliders className="w-4 h-4 text-sky-400" />
-          </button>
 
           <PWAInstallButton />
         </div>
       </header>
 
-      {/* Main Map Viewport */}
+      {/* Main Viewport */}
       <main className="relative flex-1 w-full overflow-hidden bg-slate-950 min-h-0">
-        {settings.mapType === 'vector_canvas' ? (
-          <VectorCanvasMap
-            trackPoints={trackPoints}
-            waypoints={waypoints}
-            currentPosition={currentPosition}
-            isRecording={isRecording}
-            highlightedPointIndex={scrubberIndex}
-            highContrast={settings.highContrastMode}
-          />
+        {viewMode === 'route_3d' ? (
+          /* REAL ROUTE 3D VIEWPORT */
+          <div className="relative w-full h-full">
+            <Route3DViewer
+              trackPoints={trackPoints}
+              waypoints={waypoints}
+              currentPosition={currentPosition}
+              isRecording={isRecording}
+              isFullscreen={false}
+              onToggleFullscreen={handleToggleFullscreen}
+              onStartRecording={handleStartRecording}
+            />
+          </div>
         ) : (
-          <LeafletMapRenderer
-            trackPoints={trackPoints}
-            waypoints={waypoints}
-            currentPosition={currentPosition}
-            isRecording={isRecording}
-            highlightedPointIndex={scrubberIndex}
-          />
-        )}
+          /* OUTDOOR GPS 2D VIEWPORT */
+          <>
+            {settings.mapType === 'vector_canvas' ? (
+              <VectorCanvasMap
+                trackPoints={trackPoints}
+                waypoints={waypoints}
+                currentPosition={currentPosition}
+                isRecording={isRecording}
+                highlightedPointIndex={scrubberIndex}
+                highContrast={settings.highContrastMode}
+              />
+            ) : (
+              <LeafletMapRenderer
+                trackPoints={trackPoints}
+                waypoints={waypoints}
+                currentPosition={currentPosition}
+                isRecording={isRecording}
+                highlightedPointIndex={scrubberIndex}
+              />
+            )}
 
-        {/* Collapsible Elevation Profile Drawer (Only when user has recorded points) */}
-        {trackPoints.length >= 2 && (
-          <div className="absolute left-3 right-3 sm:left-4 sm:right-auto sm:w-96 bottom-3 sm:bottom-4 z-20 transition-all duration-300">
-            <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border border-slate-700/80 rounded-t-xl backdrop-blur-md">
-              <span className="text-[11px] font-mono font-semibold text-slate-300 uppercase tracking-wider">
-                Altimetría del Recorrido
-              </span>
-              <button
-                onClick={() => setShowElevationDrawer(!showElevationDrawer)}
-                className="text-slate-400 hover:text-slate-100 p-0.5"
-              >
-                {showElevationDrawer ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-              </button>
-            </div>
+            {/* Collapsible Elevation Profile Drawer */}
+            {trackPoints.length >= 2 && (
+              <div className="absolute left-3 right-3 sm:left-4 sm:right-auto sm:w-96 bottom-3 sm:bottom-4 z-20 transition-all duration-300">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border border-slate-700/80 rounded-t-xl backdrop-blur-md">
+                  <span className="text-[11px] font-mono font-semibold text-slate-300 uppercase tracking-wider">
+                    Altimetría del Recorrido
+                  </span>
+                  <button
+                    onClick={() => setShowElevationDrawer(!showElevationDrawer)}
+                    className="text-slate-400 hover:text-slate-100 p-0.5"
+                  >
+                    {showElevationDrawer ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                  </button>
+                </div>
 
-            {showElevationDrawer && (
-              <div className="rounded-b-xl overflow-hidden shadow-2xl border-x border-b border-slate-700/80">
-                <ElevationProfile
-                  trackPoints={trackPoints}
-                  elevationGain={currentRoute?.elevationGain || 0}
-                  elevationLoss={currentRoute?.elevationLoss || 0}
-                  currentAltitude={currentPosition?.altitude ?? null}
-                  onHoverPoint={(idx) => setScrubberIndex(idx)}
-                />
+                {showElevationDrawer && (
+                  <div className="rounded-b-xl overflow-hidden shadow-2xl border-x border-b border-slate-700/80">
+                    <ElevationProfile
+                      trackPoints={trackPoints}
+                      elevationGain={currentRoute?.elevationGain || 0}
+                      elevationLoss={currentRoute?.elevationLoss || 0}
+                      currentAltitude={currentPosition?.altitude ?? null}
+                      onHoverPoint={(idx) => setScrubberIndex(idx)}
+                    />
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
       </main>
 
