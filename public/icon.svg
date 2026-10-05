@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="128" fill="#090d16"/>
+  <!-- Topographic background contour circles -->
+  <circle cx="256" cy="256" r="210" stroke="#1e293b" stroke-width="2" stroke-dasharray="6 6"/>
+  <circle cx="256" cy="256" r="160" stroke="#334155" stroke-width="2"/>
+  <circle cx="256" cy="256" r="110" stroke="#475569" stroke-width="2" stroke-dasharray="4 4"/>
+  <!-- Compass crosshairs -->
+  <line x1="256" y1="36" x2="256" y2="476" stroke="#22c55e" stroke-width="2" stroke-opacity="0.3"/>
+  <line x1="36" y1="256" x2="476" y2="256" stroke="#22c55e" stroke-width="2" stroke-opacity="0.3"/>
+  <!-- Outdoor Trail Path -->
+  <path d="M 120 380 C 160 300, 200 360, 256 256 C 290 190, 340 220, 390 130" fill="none" stroke="#22c55e" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Trail dashed guide -->
+  <path d="M 120 380 C 160 300, 200 360, 256 256 C 290 190, 340 220, 390 130" fill="none" stroke="#4ade80" stroke-width="4" stroke-dasharray="8 8" stroke-linecap="round"/>
+  <!-- Start Point (Green) -->
+  <circle cx="120" cy="380" r="18" fill="#10b981" stroke="#ffffff" stroke-width="4"/>
+  <circle cx="120" cy="380" r="6" fill="#ffffff"/>
+  <!-- Current/Way Point (Orange/Amber) -->
+  <circle cx="256" cy="256" r="14" fill="#f59e0b" stroke="#ffffff" stroke-width="3"/>
+  <!-- End Point / Mountain Flag (Red) -->
+  <circle cx="390" cy="130" r="18" fill="#ef4444" stroke="#ffffff" stroke-width="4"/>
+  <circle cx="390" cy="130" r="6" fill="#ffffff"/>
+  <!-- Compass Arrow -->
+  <polygon points="256,170 268,230 256,220 244,230" fill="#38bdf8"/>
+  <!-- Altitude / Mountain Silhouette -->
+  <path d="M 180 430 L 256 340 L 332 430 Z" fill="#1e293b" opacity="0.6"/>
+  <path d="M 270 430 L 330 360 L 390 430 Z" fill="#0f172a" opacity="0.8"/>
+</svg>

@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* Leaflet Tile Darkening and Contrast Filter for Tactical Outdoor Map */
+.leaflet-tile {
+  filter: brightness(0.68) invert(1) contrast(3.2) hue-rotate(190deg) saturate(0.3) brightness(0.7);
+}
+
+.leaflet-container {
+  background-color: #090d16 !important;
+  font-family: inherit;
+}
+
+/* Custom Leaflet popup styling */
+.leaflet-popup-content-wrapper {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border-radius: 12px !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7) !important;
+}
+
+.leaflet-popup-tip {
+  background: #0f172a !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  font-size: 12px !important;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

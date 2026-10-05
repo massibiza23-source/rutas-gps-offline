@@ -1,0 +1,10 @@
+{
+  "name": "RutaGPS Offline - Outdoor Tracker",
+  "description": "Sistema de registro y visualización de rutas GPS 100% offline para senderismo y ciclismo, con almacenamiento local en IndexedDB, lienzo vectorial autónomo y soporte de mapas.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
