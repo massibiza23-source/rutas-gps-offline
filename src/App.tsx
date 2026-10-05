@@ -16,6 +16,7 @@ import { ElevationProfile } from './components/ElevationProfile';
 import { AddWaypointModal } from './components/AddWaypointModal';
 import { RouteHistoryModal } from './components/RouteHistoryModal';
 import { SettingsModal } from './components/SettingsModal';
+import { AltimeterCalibrationModal } from './components/AltimeterCalibrationModal';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { dbService } from './services/db';
@@ -63,12 +64,15 @@ export default function App() {
     addWaypoint,
     loadRouteDetails,
     updateSettings,
+    calibrateAltitude,
+    resetAltitudeCalibration,
   } = useGPSTracker();
 
   // Modals state
   const [isWaypointModalOpen, setIsWaypointModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isCalibrateModalOpen, setIsCalibrateModalOpen] = useState(false);
   const [showElevationDrawer, setShowElevationDrawer] = useState(true);
   const [scrubberIndex, setScrubberIndex] = useState<number | null>(null);
 
@@ -451,10 +455,21 @@ export default function App() {
           onOpenWaypointModal={() => setIsWaypointModalOpen(true)}
           onToggleMapMode={handleToggleMapMode}
           mapType={settings.mapType}
+          onOpenCalibrateModal={() => setIsCalibrateModalOpen(true)}
+          altitudeOffset={settings.altitudeOffset || 0}
         />
       </footer>
 
       {/* Modals */}
+      <AltimeterCalibrationModal
+        isOpen={isCalibrateModalOpen}
+        onClose={() => setIsCalibrateModalOpen(false)}
+        currentAltitude={currentPosition?.altitude ?? null}
+        altitudeOffset={settings.altitudeOffset || 0}
+        onCalibrate={calibrateAltitude}
+        onReset={resetAltitudeCalibration}
+      />
+
       <AddWaypointModal
         isOpen={isWaypointModalOpen}
         onClose={() => setIsWaypointModalOpen(false)}

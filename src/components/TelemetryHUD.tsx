@@ -21,6 +21,8 @@ import {
   ChevronDown,
   ChevronUp,
   Mountain,
+  Sliders,
+  Gauge,
 } from 'lucide-react';
 import { formatDistance, formatDuration, formatPace, formatSpeed } from '../utils/geoUtils';
 
@@ -37,6 +39,8 @@ interface TelemetryHUDProps {
   onOpenWaypointModal: () => void;
   onToggleMapMode: () => void;
   mapType: 'vector_canvas' | 'leaflet_osm' | 'leaflet_topo';
+  onOpenCalibrateModal?: () => void;
+  altitudeOffset?: number;
 }
 
 export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
@@ -52,6 +56,8 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
   onOpenWaypointModal,
   onToggleMapMode,
   mapType,
+  onOpenCalibrateModal,
+  altitudeOffset = 0,
 }) => {
   const isRecording = currentRoute?.status === 'recording';
   const isPaused = currentRoute?.status === 'paused';
@@ -245,13 +251,18 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
             </div>
 
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
                   Altímetro
                 </span>
                 <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-teal-950 border border-teal-500/30 text-teal-300 font-bold">
                   MSNM
                 </span>
+                {altitudeOffset !== 0 && (
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-bold">
+                    {altitudeOffset > 0 ? `+${altitudeOffset}m` : `${altitudeOffset}m`} CAL
+                  </span>
+                )}
               </div>
 
               <div className="flex items-baseline gap-2 mt-0.5">
@@ -265,14 +276,27 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
             </div>
           </div>
 
-          {/* Cotas min/max */}
-          <div className="text-right text-[10px] text-slate-400 font-mono">
-            <div>
-              Mín: <strong className="text-slate-200">{minAlt}{typeof minAlt === 'number' ? 'm' : ''}</strong>
+          {/* Cotas min/max & Calibrate Button */}
+          <div className="flex items-center gap-2.5">
+            <div className="text-right text-[10px] text-slate-400 font-mono">
+              <div>
+                Mín: <strong className="text-slate-200">{minAlt}{typeof minAlt === 'number' ? 'm' : ''}</strong>
+              </div>
+              <div>
+                Máx: <strong className="text-slate-200">{maxAlt}{typeof maxAlt === 'number' ? 'm' : ''}</strong>
+              </div>
             </div>
-            <div>
-              Máx: <strong className="text-slate-200">{maxAlt}{typeof maxAlt === 'number' ? 'm' : ''}</strong>
-            </div>
+
+            {onOpenCalibrateModal && (
+              <button
+                onClick={onOpenCalibrateModal}
+                title="Calibrar altímetro barométrico y cota GPS"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-teal-400 border border-slate-700 font-bold text-[11px] active:scale-95 transition cursor-pointer shadow-sm"
+              >
+                <Sliders className="w-3.5 h-3.5 text-teal-400" />
+                <span>Calibrar</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -83,6 +83,18 @@ export interface TrackerSettings {
   mapType: 'vector_canvas' | 'leaflet_osm' | 'leaflet_topo';
   highContrastMode: boolean;
   units: 'metric' | 'imperial';
+  altitudeOffset: number; // Manual calibration offset in meters (positive or negative)
+}
+
+export type Route3DColorScheme = 'altitude_gradient' | 'neon_emerald' | 'cyan_laser' | 'sunset_fire';
+
+export interface Route3DLineSettings {
+  lineWidth: number; // radius in meters/pixels (e.g. 1.2, 2.2, 3.8, 5.5)
+  elevationScale: number; // vertical exaggeration multiplier (1.0, 1.8, 2.8, 4.5)
+  colorScheme: Route3DColorScheme;
+  showCurtain: boolean; // vertical drop curtain to ground reference plane
+  showGroundShadow: boolean; // 2D projection on ground
+  glowIntensity: number; // emissive brightness
 }
 
 export type GPSConnectionStatus =

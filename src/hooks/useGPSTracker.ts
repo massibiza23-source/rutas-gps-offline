@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS: TrackerSettings = {
   mapType: 'vector_canvas',
   highContrastMode: false,
   units: 'metric',
+  altitudeOffset: 0,
 };
 
 export function useGPSTracker() {
@@ -38,7 +39,19 @@ export function useGPSTracker() {
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [currentPosition, setCurrentPosition] = useState<CurrentPositionState | null>(null);
   const [gpsStatus, setGpsStatus] = useState<GPSConnectionStatus>('prompt');
-  const [settings, setSettings] = useState<TrackerSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<TrackerSettings>(() => {
+    try {
+      const saved = localStorage.getItem('rutagps_settings');
+      const offsetSaved = localStorage.getItem('rutagps_altitude_offset');
+      const base = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+      if (offsetSaved !== null) {
+        base.altitudeOffset = parseFloat(offsetSaved) || 0;
+      }
+      return base;
+    } catch {
+      return DEFAULT_SETTINGS;
+    }
+  });
   const [isSimulating, setIsSimulating] = useState(false);
   const [batteryInfo, setBatteryInfo] = useState<{ level: number | null; charging: boolean | null }>({
     level: null,
@@ -121,7 +134,9 @@ export function useGPSTracker() {
   const processNewPosition = useCallback((coords: GeolocationCoordinates, timestamp: number) => {
     const lat = coords.latitude;
     const lng = coords.longitude;
-    const altitude = coords.altitude !== null && !isNaN(coords.altitude) ? coords.altitude : null;
+    const rawAltitude = coords.altitude !== null && !isNaN(coords.altitude) ? coords.altitude : null;
+    const offset = settingsRef.current.altitudeOffset || 0;
+    const altitude = rawAltitude !== null ? Math.round((rawAltitude + offset) * 10) / 10 : null;
     const accuracy = coords.accuracy || 10;
     const speed = coords.speed !== null && !isNaN(coords.speed) ? coords.speed : null;
     const heading = coords.heading !== null && !isNaN(coords.heading) ? coords.heading : null;
@@ -506,7 +521,68 @@ export function useGPSTracker() {
   }, []);
 
   const updateSettings = useCallback((newPartial: Partial<TrackerSettings>) => {
-    setSettings((prev) => ({ ...prev, ...newPartial }));
+    setSettings((prev) => {
+      const updated = { ...prev, ...newPartial };
+      try {
+        localStorage.setItem('rutagps_settings', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, []);
+
+  const calibrateAltitude = useCallback((targetAltitudeMeters: number) => {
+    setCurrentPosition((prev) => {
+      const currentRaw = prev?.altitude !== null && prev?.altitude !== undefined
+        ? prev.altitude - (settingsRef.current.altitudeOffset || 0)
+        : 450;
+      const newOffset = Math.round((targetAltitudeMeters - currentRaw) * 10) / 10;
+
+      setSettings((s) => {
+        const updated = { ...s, altitudeOffset: newOffset };
+        try {
+          localStorage.setItem('rutagps_altitude_offset', String(newOffset));
+          localStorage.setItem('rutagps_settings', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      if (!prev) {
+        return {
+          lat: 42.0,
+          lng: 1.0,
+          altitude: targetAltitudeMeters,
+          accuracy: 5,
+          speed: 0,
+          heading: 0,
+          timestamp: Date.now(),
+        };
+      }
+
+      return {
+        ...prev,
+        altitude: targetAltitudeMeters,
+      };
+    });
+  }, []);
+
+  const resetAltitudeCalibration = useCallback(() => {
+    setSettings((s) => {
+      const updated = { ...s, altitudeOffset: 0 };
+      try {
+        localStorage.removeItem('rutagps_altitude_offset');
+        localStorage.setItem('rutagps_settings', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    setCurrentPosition((prev) => {
+      if (!prev || prev.altitude === null) return prev;
+      const currentOffset = settingsRef.current.altitudeOffset || 0;
+      return {
+        ...prev,
+        altitude: Math.round((prev.altitude - currentOffset) * 10) / 10,
+      };
+    });
   }, []);
 
   return {
@@ -528,6 +604,8 @@ export function useGPSTracker() {
     stopSimulation,
     loadRouteDetails,
     updateSettings,
+    calibrateAltitude,
+    resetAltitudeCalibration,
     setCurrentRoute,
     setTrackPoints,
     setWaypoints,
